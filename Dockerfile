@@ -1,4 +1,9 @@
-FROM golang:1.22.3@sha256:f43c6f049f04cbbaeb28f0aad3eea15274a7d0a7899a617d0037aec48d7ab010 as builder
+ARG TARGETOS
+ARG TARGETARCH
+ARG BUILD_IMAGE=golang:1.22.4-alpine
+ARG BASE_IMAGE=gcr.io/distroless/static:nonroot
+
+FROM --platform=$BUILDPLATFORM ${BUILD_IMAGE} AS builder
 RUN mkdir /build
 WORKDIR /build
 COPY go.mod go.mod
@@ -7,9 +12,9 @@ RUN go mod download
 COPY main.go main.go
 COPY internal/ internal/
 COPY pkg/ pkg/
-RUN CGO_ENABLED=0 go build -installsuffix 'static' -o spegel .
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -installsuffix 'static' -o spegel .
 
-FROM gcr.io/distroless/static:nonroot
+FROM ${BASE_IMAGE}
 COPY --from=builder /build/spegel /app/
 WORKDIR /app
 USER root:root
